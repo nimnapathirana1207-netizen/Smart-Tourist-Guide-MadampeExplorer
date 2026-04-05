@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Explore the Map – Madampe Explorer</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --sand:  #f5ede0; --sand2: #e8d9c4;
+      --teal:  #1a5c52; --teal2: #22776a; --teal3: #0d3d35;
+      --gold:  #c8923a; --gold2: #e0b060;
+      --dark:  #12211e; --text: #2c3e35; --muted: #6b7c74;
+      --white: #ffffff; --radius: 14px;
+    }
+    html, body { height: 100%; overflow: hidden; font-family: 'DM Sans', sans-serif; background: var(--dark); }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 24px;
+      background: rgba(13,61,53,.97);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(200,146,58,.2);
+    }
+    .nav-logo { font-family:'Playfair Display',serif; font-size:1.2rem; font-weight:900; color:var(--gold2); }
+    .nav-logo span { color: var(--white); }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .nav-back {
+      display: flex; align-items: center; gap: 6px;
+      color: rgba(255,255,255,.75); text-decoration: none;
+      font-size: .85rem; font-weight: 500;
+      padding: 7px 14px; border-radius: 50px;
+      border: 1px solid rgba(255,255,255,.15);
+      transition: all .2s;
+    }
+    .nav-back:hover { color: var(--gold2); border-color: var(--gold2); }
+
+    /* ── FULL HEIGHT MAP ── */
+    #map {
+      position: fixed; inset: 0; top: 52px;
+      z-index: 1;
+    }
+
+    /* ── SIDEBAR PANEL ── */
+    .panel {
+      position: fixed; left: 16px; top: 68px; bottom: 16px;
+      width: 320px; z-index: 500;
+      background: rgba(13,61,53,.97);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 16px;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,.5);
+      animation: slideIn .4s ease both;
+    }
+    @keyframes slideIn { from { transform:translateX(-20px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+
+    .panel-header { padding: 20px 20px 14px; border-bottom: 1px solid rgba(255,255,255,.08); }
+    .panel-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.2rem; font-weight: 900; color: var(--white);
+    }
+    .panel-sub { font-size: .78rem; color: rgba(255,255,255,.5); margin-top: 3px; }
+
+    /* Search */
+    .panel-search {
+      padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .search-input {
+      width: 100%; padding: 9px 14px;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 8px; color: var(--white);
+      font-size: .85rem; font-family: 'DM Sans', sans-serif;
+    }
+    .search-input::placeholder { color: rgba(255,255,255,.3); }
+    .search-input:focus { outline: none; border-color: var(--teal2); }
+
+    /* Category chips */
+    .cat-chips {
+      padding: 10px 16px; display: flex; gap: 6px; flex-wrap: wrap;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .cat-chip {
+      padding: 5px 12px; border-radius: 50px; font-size: .72rem; font-weight: 600;
+      cursor: pointer; border: 1px solid rgba(255,255,255,.15);
+      color: rgba(255,255,255,.7); background: transparent;
+      font-family: 'DM Sans', sans-serif;
+      transition: all .2s;
+    }
+    .cat-chip.active { background: var(--teal2); color: var(--white); border-color: var(--teal2); }
+    .cat-chip:hover:not(.active) { border-color: rgba(255,255,255,.4); color: var(--white); }
+
+    /* Place list */
+    .place-list { flex: 1; overflow-y: auto; padding: 8px 8px; }
+    .place-list::-webkit-scrollbar { width: 4px; }
+    .place-list::-webkit-scrollbar-track { background: transparent; }
+    .place-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 4px; }
+
+    .place-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 12px; border-radius: 10px; cursor: pointer;
+      border: 1px solid transparent;
+      transition: all .2s;
+    }
+    .place-row:hover { background: rgba(255,255,255,.06); }
+    .place-row.active { background: rgba(26,92,82,.4); border-color: var(--teal2); }
+    .row-icon { font-size: 1.4rem; width: 32px; text-align: center; flex-shrink: 0; }
+    .row-info { flex: 1; min-width: 0; }
+    .row-name { font-weight: 600; color: var(--white); font-size: .88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .row-meta { font-size: .72rem; color: rgba(255,255,255,.45); margin-top: 2px; }
+    .row-dist {
+      font-size: .72rem; font-weight: 700; color: var(--gold2);
+      background: rgba(224,176,96,.12); padding: 3px 8px; border-radius: 50px;
+      flex-shrink: 0;
+    }
+
+    /* Detail popup inside panel */
+    .detail-panel {
+      position: absolute; inset: 0;
+      background: rgba(13,61,53,.98);
+      backdrop-filter: blur(12px);
+      display: flex; flex-direction: column;
+      transform: translateX(100%);
+      transition: transform .3s ease;
+      border-radius: 16px; overflow: hidden;
+    }
+    .detail-panel.open { transform: translateX(0); }
+    .detail-hero {
+      height: 120px; display: flex; align-items: center; justify-content: center;
+      font-size: 4rem; position: relative;
+      background: linear-gradient(135deg, var(--teal3), rgba(26,92,82,.8));
+    }
+    .detail-back {
+      position: absolute; top: 12px; left: 12px;
+      background: rgba(0,0,0,.3); color: var(--white);
+      border: none; border-radius: 50px; padding: 6px 14px;
+      font-size: .78rem; font-weight: 600; cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .detail-body { padding: 20px; flex: 1; overflow-y: auto; }
+    .detail-cat {
+      display: inline-block; background: var(--gold); color: var(--white);
+      font-size: .68rem; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase; padding: 3px 10px; border-radius: 50px;
+      margin-bottom: 8px;
+    }
+    .detail-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.3rem; font-weight: 900; color: var(--white); line-height: 1.2;
+    }
+    .detail-dist { font-size: .8rem; color: rgba(255,255,255,.5); margin-top: 4px; }
+    .detail-desc { font-size: .85rem; color: rgba(255,255,255,.75); line-height: 1.7; margin-top: 14px; }
+    .detail-actions { display: flex; gap: 8px; margin-top: 18px; }
+    .detail-btn {
+      flex: 1; padding: 10px; border-radius: 8px; border: none;
+      font-size: .82rem; font-weight: 600; cursor: pointer;
+      font-family: 'DM Sans', sans-serif; transition: opacity .2s;
+    }
+    .detail-btn:hover { opacity: .85; }
+    .detail-btn-primary { background: var(--teal2); color: var(--white); }
+    .detail-btn-sec { background: rgba(255,255,255,.1); color: var(--white); }
+
+    /* ── CUSTOM LEAFLET MARKERS ── */
+    .custom-marker {
+      width: 42px; height: 42px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 14px rgba(0,0,0,.4);
+      border: 2px solid rgba(255,255,255,.8);
+      transition: transform .2s;
+      cursor: pointer;
+    }
+    .custom-marker .inner {
+      transform: rotate(45deg);
+      font-size: 1.1rem; line-height: 1;
+    }
+    .marker-Sightseeing { background: #1a5c52; }
+    .marker-Religious   { background: #8b3a3a; }
+    .marker-Nature      { background: #2e6b30; }
+    .marker-Cultural    { background: #7a5a1a; }
+    .marker-Leisure     { background: #1a4a7a; }
+    .marker-Hotel       { background: #5a1a7a; }
+    .marker-default     { background: #444;    }
+
+    .custom-marker.pulse::after {
+      content: ''; position: absolute;
+      width: 100%; height: 100%;
+      border-radius: 50% 50% 50% 0;
+      border: 2px solid currentColor;
+      animation: pulse 1.5s ease infinite;
+      opacity: .6;
+    }
+    @keyframes pulse { 0%{transform:scale(1);opacity:.6} 100%{transform:scale(1.8);opacity:0} }
+
+    /* Madampe centre marker */
+    .centre-marker {
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--gold); border: 3px solid var(--white);
+      box-shadow: 0 0 0 4px rgba(200,146,58,.4), 0 4px 12px rgba(0,0,0,.4);
+    }
+
+    /* Leaflet popup override */
+    .leaflet-popup-content-wrapper {
+      background: var(--teal3) !important;
+      border: 1px solid rgba(255,255,255,.15) !important;
+      border-radius: 12px !important;
+      box-shadow: 0 8px 32px rgba(0,0,0,.4) !important;
+      color: var(--white) !important;
+    }
+    .leaflet-popup-tip { background: var(--teal3) !important; }
+    .leaflet-popup-content { margin: 14px 16px !important; }
+    .popup-name { font-family:'Playfair Display',serif; font-weight:900; font-size:1rem; color:var(--white); }
+    .popup-meta { font-size:.78rem; color:rgba(255,255,255,.6); margin-top:4px; }
+    .popup-btn {
+      display:block; margin-top:10px; padding:7px 14px;
+      background:var(--teal2); color:var(--white);
+      border:none; border-radius:6px; font-size:.78rem; font-weight:600;
+      cursor:pointer; font-family:'DM Sans',sans-serif; width:100%; text-align:center;
+      text-decoration:none;
+    }
+
+    /* Legend */
+    .legend {
+      position: fixed; right: 16px; bottom: 32px; z-index: 500;
+      background: rgba(13,61,53,.95); backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,.1); border-radius: 12px;
+      padding: 14px 16px;
+      animation: slideIn .5s .2s ease both;
+    }
+    .legend-title { font-size: .7rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.5); margin-bottom: 10px; }
+    .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: .78rem; color: rgba(255,255,255,.8); }
+    .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+    .legend-item:last-child { margin-bottom: 0; }
+
+    /* Count badge on nav */
+    .count-badge {
+      background: var(--gold); color: var(--white);
+      font-size: .7rem; font-weight: 700; padding: 2px 8px; border-radius: 50px;
+    }
+
+    /* Mobile toggle */
+    .panel-toggle {
+      display: none; position: fixed; left: 16px; bottom: 24px; z-index: 600;
+      background: var(--teal); color: var(--white);
+      border: none; border-radius: 50px; padding: 12px 20px;
+      font-size: .88rem; font-weight: 600; font-family: 'DM Sans', sans-serif;
+      box-shadow: 0 4px 20px rgba(0,0,0,.4); cursor: pointer;
+    }
+    @media(max-width:700px) {
+      .panel { left: 0; right: 0; top: auto; bottom: 0; width: 100%; height: 55vh; border-radius: 16px 16px 0 0; transform: translateY(100%); transition: transform .3s ease; }
+      .panel.mobile-open { transform: translateY(0); }
+      .legend { display: none; }
+      .panel-toggle { display: flex; align-items: center; gap: 6px; }
+    }
+
+    .spinner { width:24px;height:24px;border:3px solid rgba(255,255,255,.15);border-top-color:var(--teal2);border-radius:50%;animation:spin .7s linear infinite;margin:auto; }
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Madampe<span>Explorer</span></div>
+  <div class="nav-right">
+    <span class="count-badge" id="countBadge">Loading…</span>
+    <a href="index.html" class="nav-back">← Back</a>
+  </div>
+</nav>
+
+<!-- MAP -->
+<div id="map"></div>
+
+<!-- SIDE PANEL -->
+<div class="panel" id="panel">
+  <div class="panel-header">
+    <div class="panel-title">🗺️ Attraction Map</div>
+    <div class="panel-sub" id="panelSub">Loading places…</div>
+  </div>
+  <div class="panel-search">
+    <input class="search-input" id="searchInput" placeholder="🔍  Search attractions…" oninput="filterList()"/>
+  </div>
+  <div class="cat-chips" id="catChips">
+    <button class="cat-chip active" data-cat="all" onclick="setFilter('all',this)">All</button>
+  </div>
+  <div class="place-list" id="placeList">
+    <div style="padding:20px;text-align:center"><div class="spinner"></div></div>
+  </div>
+
+  <!-- Detail slide-in -->
+  <div class="detail-panel" id="detailPanel">
+    <div class="detail-hero" id="detailHero">
+      <button class="detail-back" onclick="closeDetail()">← Back</button>
+      <span id="detailIcon"></span>
+    </div>
+    <div class="detail-body">
+      <div class="detail-cat" id="detailCat"></div>
+      <div class="detail-name" id="detailName"></div>
+      <div class="detail-dist" id="detailDist"></div>
+      <div class="detail-desc" id="detailDesc"></div>
+      <div class="detail-actions">
+        <a class="detail-btn detail-btn-primary" id="detailLink" href="#">View Full Details</a>
+        <button class="detail-btn detail-btn-sec" id="detailPlan" onclick="togglePlanFromDetail()">+ Add to Plan</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LEGEND -->
+<div class="legend">
+  <div class="legend-title">Categories</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#1a5c52"></div>Sightseeing</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#8b3a3a"></div>Religious</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#2e6b30"></div>Nature</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#7a5a1a"></div>Cultural</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#1a4a7a"></div>Leisure</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#5a1a7a"></div>Hotel</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--gold)"></div>Madampe Centre</div>
+</div>
+
+<!-- Mobile toggle -->
+<button class="panel-toggle" id="panelToggle" onclick="toggleMobilePanel()">🗺️ Show Places</button>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+const API = './api';
+
+const CAT_COLORS = {
+  Sightseeing:'#1a5c52', Religious:'#8b3a3a', Nature:'#2e6b30',
+  Cultural:'#7a5a1a', Leisure:'#1a4a7a', Hotel:'#5a1a7a'
+};
+
+const MADAMPE = [7.6136, 79.8703];
+
+// Fallback places with coordinates
+const FALLBACK = [
+  {id:1,name:"Marawila Beach",category_name:"Sightseeing",category_icon:"🏖️",distance_km:8,description:"A popular sandy beach ideal for relaxation, swimming, and watching breathtaking sunsets over the Indian Ocean.",latitude:7.5100,longitude:79.8800},
+  {id:2,name:"Munneswaram Temple",category_name:"Religious",category_icon:"🛕",distance_km:15,description:"A historic and revered Hindu temple attracting pilgrims for centuries.",latitude:7.6050,longitude:79.9200},
+  {id:3,name:"Chilaw Beach Park",category_name:"Leisure",category_icon:"🌊",distance_km:18,description:"A public coastal recreation area for picnics and walks along the shore.",latitude:7.5750,longitude:79.7950},
+  {id:4,name:"Senanayake Aramaya",category_name:"Religious",category_icon:"🏯",distance_km:6,description:"A peaceful Buddhist temple with serene atmosphere for meditation.",latitude:7.6200,longitude:79.8850},
+  {id:5,name:"Madampe Market",category_name:"Cultural",category_icon:"🏛️",distance_km:1,description:"The vibrant local marketplace showcasing authentic daily community life.",latitude:7.6136,longitude:79.8750},
+  {id:6,name:"Deduru Oya River",category_name:"Nature",category_icon:"🌿",distance_km:12,description:"A scenic river environment ideal for birdwatching and photography.",latitude:7.6400,longitude:79.9400},
+  {id:7,name:"Thoduwawa Beach",category_name:"Sightseeing",category_icon:"🎣",distance_km:10,description:"A charming fishing village beach with natural scenery.",latitude:7.5400,longitude:79.8600},
+  {id:8,name:"St. Anne's Church Talawila",category_name:"Religious",category_icon:"⛪",distance_km:22,description:"A famous Catholic pilgrimage destination in Sri Lanka.",latitude:7.7200,longitude:79.8200},
+  {id:9,name:"Club Palm Bay Hotel",category_name:"Hotel",category_icon:"🏨",distance_km:9,description:"A beautiful beachfront resort with accommodation and dining.",latitude:7.5200,longitude:79.8750},
+  {id:10,name:"Amagi Beach Hotel",category_name:"Hotel",category_icon:"🌴",distance_km:11,description:"A coastal hotel offering dining and leisure facilities.",latitude:7.5050,longitude:79.8820},
+];
+
+let map, allPlaces = [], markers = {}, currentFilter = 'all', activeId = null, detailId = null;
+
+// ── INIT MAP ──────────────────────────────────────────────
+function initMap() {
+  map = L.map('map', { zoomControl: false }).setView(MADAMPE, 11);
+
+  // OpenStreetMap tiles (no API key needed)
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 18,
+  }).addTo(map);
+
+  // Custom zoom control position
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+  // Madampe centre pin
+  const centreIcon = L.divIcon({
+    html: '<div class="centre-marker"></div>',
+    className: '', iconSize: [18,18], iconAnchor: [9,9]
+  });
+  L.marker(MADAMPE, { icon: centreIcon })
+    .addTo(map)
+    .bindPopup('<div class="popup-name">📍 Madampe Town Centre</div><div class="popup-meta">Starting point for all trips</div>');
+
+  // 25km radius circle
+  L.circle(MADAMPE, {
+    radius: 25000,
+    color: 'rgba(200,146,58,.5)',
+    fillColor: 'rgba(200,146,58,.04)',
+    fillOpacity: 1,
+    weight: 1.5,
+    dashArray: '6,6'
+  }).addTo(map);
+}
+
+// ── CUSTOM MARKER ICON ────────────────────────────────────
+function makeIcon(place, isActive = false) {
+  const color = CAT_COLORS[place.category_name] || '#444';
+  const cls   = `marker-${place.category_name}`;
+  return L.divIcon({
+    html: `<div class="custom-marker ${cls} ${isActive?'pulse':''}" style="background:${color}">
+             <div class="inner">${place.category_icon||'📍'}</div>
+           </div>`,
+    className: '',
+    iconSize:   [42, 42],
+    iconAnchor: [21, 42],
+    popupAnchor:[0, -44]
+  });
+}
+
+// ── PLACE PINS ────────────────────────────────────────────
+function addMarkers(places) {
+  // Clear existing markers
+  Object.values(markers).forEach(m => map.removeLayer(m));
+  markers = {};
+
+  places.forEach(p => {
+    if (!p.latitude || !p.longitude) return;
+
+    const m = L.marker([p.latitude, p.longitude], { icon: makeIcon(p) })
+      .addTo(map)
+      .bindPopup(`
+        <div class="popup-name">${p.category_icon||'📍'} ${p.name}</div>
+        <div class="popup-meta">${p.category_name} · ${p.distance_km} km from Madampe</div>
+        <a class="popup-btn" href="place.html?id=${p.id}">View Details →</a>
+      `);
+
+    m.on('click', () => {
+      selectPlace(p.id, false);
+      openDetail(p.id);
+    });
+
+    markers[p.id] = m;
+  });
+}
+
+// ── SIDEBAR LIST ──────────────────────────────────────────
+function renderList(places) {
+  const list = document.getElementById('placeList');
+  if (!places.length) {
+    list.innerHTML = `<div style="padding:24px;text-align:center;color:rgba(255,255,255,.3);font-size:.85rem">No places found</div>`;
+    return;
+  }
+  list.innerHTML = places.map(p => `
+    <div class="place-row ${activeId===p.id?'active':''}" id="row-${p.id}"
+         onclick="selectPlace(${p.id}, true); openDetail(${p.id})">
+      <div class="row-icon">${p.category_icon||'📍'}</div>
+      <div class="row-info">
+        <div class="row-name">${p.name}</div>
+        <div class="row-meta">${p.category_name}</div>
+      </div>
+      <div class="row-dist">${p.distance_km}km</div>
+    </div>`).join('');
+}
+
+function buildCatChips(places) {
+  const cats = [...new Set(places.map(p => p.category_name))];
+  const wrap = document.getElementById('catChips');
+  wrap.innerHTML = `<button class="cat-chip active" data-cat="all" onclick="setFilter('all',this)">All</button>` +
+    cats.map(c => {
+      const icon = places.find(p => p.category_name === c)?.category_icon || '';
+      return `<button class="cat-chip" data-cat="${c}" onclick="setFilter('${c}',this)">${icon} ${c}</button>`;
+    }).join('');
+}
+
+// ── FILTER ────────────────────────────────────────────────
+function setFilter(cat, btn) {
+  currentFilter = cat;
+  document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilter();
+}
+
+function filterList() { applyFilter(); }
+
+function applyFilter() {
+  const q   = document.getElementById('searchInput').value.toLowerCase();
+  const filtered = allPlaces.filter(p =>
+    (currentFilter === 'all' || p.category_name === currentFilter) &&
+    p.name.toLowerCase().includes(q)
+  );
+
+  // Show/hide markers
+  allPlaces.forEach(p => {
+    if (!markers[p.id]) return;
+    const show = filtered.find(f => f.id === p.id);
+    if (show) map.addLayer(markers[p.id]);
+    else map.removeLayer(markers[p.id]);
+  });
+
+  renderList(filtered);
+  document.getElementById('panelSub').textContent = `${filtered.length} of ${allPlaces.length} attractions`;
+}
+
+// ── SELECT / FOCUS ────────────────────────────────────────
+function selectPlace(id, flyTo = true) {
+  // Deselect old
+  if (activeId && markers[activeId]) {
+    const old = allPlaces.find(p => p.id === activeId);
+    if (old) markers[activeId].setIcon(makeIcon(old, false));
+    const oldRow = document.getElementById(`row-${activeId}`);
+    if (oldRow) oldRow.classList.remove('active');
+  }
+  activeId = id;
+
+  // Activate new
+  const p = allPlaces.find(x => x.id === id);
+  if (!p) return;
+  if (markers[id]) {
+    markers[id].setIcon(makeIcon(p, true));
+    if (flyTo && p.latitude && p.longitude) {
+      map.flyTo([p.latitude, p.longitude], 14, { duration: 1.2 });
+    }
+  }
+  const row = document.getElementById(`row-${id}`);
+  if (row) { row.classList.add('active'); row.scrollIntoView({ behavior:'smooth', block:'nearest' }); }
+}
+
+// ── DETAIL PANEL ──────────────────────────────────────────
+function openDetail(id) {
+  const p = allPlaces.find(x => x.id === id);
+  if (!p) return;
+  detailId = id;
+
+  document.getElementById('detailIcon').textContent = p.category_icon || '📍';
+  document.getElementById('detailHero').style.background =
+    `linear-gradient(135deg, ${CAT_COLORS[p.category_name]||'#1a5c52'}, rgba(13,61,53,.9))`;
+  document.getElementById('detailCat').textContent  = p.category_name;
+  document.getElementById('detailName').textContent = p.name;
+  document.getElementById('detailDist').textContent = `📍 ${p.distance_km} km from Madampe`;
+  document.getElementById('detailDesc').textContent = p.description;
+  document.getElementById('detailLink').href = `place.html?id=${p.id}`;
+
+  updateDetailPlanBtn(id);
+  document.getElementById('detailPanel').classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detailPanel').classList.remove('open');
+  detailId = null;
+}
+
+function updateDetailPlanBtn(id) {
+  const saved = JSON.parse(localStorage.getItem('madampe_plan') || '[]');
+  const btn   = document.getElementById('detailPlan');
+  btn.textContent = saved.includes(id) ? '✅ In Trip Plan' : '+ Add to Plan';
+}
+
+function togglePlanFromDetail() {
+  if (!detailId) return;
+  let saved = JSON.parse(localStorage.getItem('madampe_plan') || '[]');
+  const idx = saved.indexOf(detailId);
+  if (idx === -1) saved.push(detailId); else saved.splice(idx, 1);
+  localStorage.setItem('madampe_plan', JSON.stringify(saved));
+  updateDetailPlanBtn(detailId);
+}
+
+// ── MOBILE ────────────────────────────────────────────────
+let panelOpen = false;
+function toggleMobilePanel() {
+  panelOpen = !panelOpen;
+  document.getElementById('panel').classList.toggle('mobile-open', panelOpen);
+  document.getElementById('panelToggle').textContent = panelOpen ? '✕ Close' : '🗺️ Show Places';
+}
+
+// ── LOAD DATA ─────────────────────────────────────────────
+async function init() {
+  initMap();
+  try {
+    const r = await fetch(`${API}/places.php`);
+    const d = await r.json();
+    allPlaces = d.success ? d.data : FALLBACK;
+  } catch {
+    allPlaces = FALLBACK;
+  }
+
+  const withCoords = allPlaces.filter(p => p.latitude && p.longitude);
+  document.getElementById('countBadge').textContent = `${withCoords.length} Attractions`;
+  document.getElementById('panelSub').textContent   = `${allPlaces.length} attractions`;
+
+  buildCatChips(allPlaces);
+  addMarkers(allPlaces);
+  renderList(allPlaces);
+
+  // Fit map to all markers
+  if (withCoords.length) {
+    const bounds = L.latLngBounds(withCoords.map(p => [p.latitude, p.longitude]));
+    map.fitBounds(bounds.pad(0.15));
+  }
+}
+
+init();
+</script>
+</body>
+</html>

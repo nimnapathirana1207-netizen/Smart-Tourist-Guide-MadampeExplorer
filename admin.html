@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Panel – Madampe Explorer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:      #0f1923;
+      --bg2:     #162030;
+      --bg3:     #1d2d40;
+      --border:  rgba(255,255,255,.08);
+      --teal:    #1a9c8a;
+      --teal2:   #22c4ae;
+      --gold:    #e0a040;
+      --gold2:   #f0c060;
+      --red:     #e05050;
+      --red2:    #ff7070;
+      --green:   #3dba7a;
+      --white:   #ffffff;
+      --text:    #cdd8e3;
+      --muted:   #6b8299;
+      --radius:  12px;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── LOGIN ── */
+    .login-wrap {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(ellipse at 30% 50%, rgba(26,156,138,.15) 0%, transparent 60%),
+                  radial-gradient(ellipse at 80% 20%, rgba(224,160,64,.08) 0%, transparent 50%),
+                  var(--bg);
+    }
+    .login-box {
+      width: 380px; padding: 44px 40px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      box-shadow: 0 32px 80px rgba(0,0,0,.5);
+      animation: popIn .4s ease both;
+    }
+    @keyframes popIn { from { transform: scale(.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .login-logo {
+      font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800;
+      color: var(--teal2); text-align: center; margin-bottom: 6px;
+    }
+    .login-sub { text-align: center; color: var(--muted); font-size: .85rem; margin-bottom: 32px; }
+    .login-label { font-size: .8rem; font-weight: 600; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; display: block; }
+    .login-input {
+      width: 100%; padding: 12px 16px;
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--white); font-size: .95rem; font-family: 'Outfit', sans-serif;
+      margin-bottom: 16px; transition: border-color .2s;
+    }
+    .login-input:focus { outline: none; border-color: var(--teal); }
+    .login-btn {
+      width: 100%; padding: 13px;
+      background: var(--teal); color: var(--white);
+      border: none; border-radius: 8px;
+      font-size: .95rem; font-weight: 600; font-family: 'Outfit', sans-serif;
+      cursor: pointer; transition: background .2s;
+    }
+    .login-btn:hover { background: var(--teal2); }
+    .login-err { color: var(--red2); font-size: .82rem; text-align: center; margin-top: 12px; min-height: 18px; }
+
+    /* ── DASHBOARD ── */
+    #dashboard { display: none; }
+
+    /* Sidebar */
+    .layout { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: 240px; flex-shrink: 0;
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      position: fixed; top: 0; left: 0; bottom: 0;
+      z-index: 50;
+    }
+    .side-logo {
+      padding: 24px 20px 20px;
+      font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 800;
+      color: var(--teal2);
+      border-bottom: 1px solid var(--border);
+    }
+    .side-logo span { color: var(--muted); font-size: .72rem; font-weight: 400; display: block; margin-top: 2px; letter-spacing: .06em; text-transform: uppercase; }
+    .side-nav { padding: 16px 12px; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .side-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 8px;
+      font-size: .88rem; font-weight: 500; color: var(--muted);
+      cursor: pointer; transition: all .2s; border: none; background: none;
+      width: 100%; text-align: left;
+    }
+    .side-item:hover { background: rgba(255,255,255,.05); color: var(--white); }
+    .side-item.active { background: rgba(26,156,138,.15); color: var(--teal2); }
+    .side-item .icon { font-size: 1.1rem; width: 22px; text-align: center; }
+    .side-bottom { padding: 16px 12px; border-top: 1px solid var(--border); }
+    .logout-btn {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 8px;
+      font-size: .88rem; font-weight: 500; color: var(--red2);
+      cursor: pointer; border: none; background: none; width: 100%;
+      transition: background .2s;
+    }
+    .logout-btn:hover { background: rgba(224,80,80,.1); }
+
+    /* Main area */
+    .main { margin-left: 240px; padding: 32px 36px; flex: 1; }
+
+    /* Top bar */
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 32px;
+    }
+    .page-title { font-family: 'Syne', sans-serif; font-size: 1.6rem; font-weight: 800; color: var(--white); }
+    .page-sub { color: var(--muted); font-size: .85rem; margin-top: 2px; }
+
+    /* Stats */
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+    .stat-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px 22px;
+      display: flex; flex-direction: column; gap: 6px;
+      animation: fadeUp .4s ease both;
+    }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+    .stat-card:nth-child(2) { animation-delay: .05s; }
+    .stat-card:nth-child(3) { animation-delay: .1s; }
+    .stat-card:nth-child(4) { animation-delay: .15s; }
+    .stat-icon { font-size: 1.4rem; }
+    .stat-val { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; color: var(--white); }
+    .stat-lbl { font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+
+    /* Section */
+    .section { display: none; }
+    .section.active { display: block; }
+
+    /* Table card */
+    .table-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+      animation: fadeUp .4s ease both;
+    }
+    .table-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 24px; border-bottom: 1px solid var(--border);
+    }
+    .table-title { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; color: var(--white); }
+    .add-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 9px 18px; background: var(--teal); color: var(--white);
+      border: none; border-radius: 8px; font-size: .85rem; font-weight: 600;
+      cursor: pointer; font-family: 'Outfit', sans-serif; transition: background .2s;
+    }
+    .add-btn:hover { background: var(--teal2); }
+
+    /* Search bar */
+    .search-bar {
+      padding: 14px 24px; border-bottom: 1px solid var(--border);
+      display: flex; gap: 12px;
+    }
+    .search-input {
+      flex: 1; padding: 9px 14px;
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--white); font-size: .88rem; font-family: 'Outfit', sans-serif;
+    }
+    .search-input:focus { outline: none; border-color: var(--teal); }
+    .filter-select {
+      padding: 9px 14px; background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-size: .88rem; font-family: 'Outfit', sans-serif;
+      cursor: pointer;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      padding: 12px 20px; text-align: left;
+      font-size: .72rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--muted); border-bottom: 1px solid var(--border);
+    }
+    td { padding: 14px 20px; font-size: .88rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border: none; }
+    tr:hover td { background: rgba(255,255,255,.02); }
+
+    .badge {
+      display: inline-block; padding: 3px 10px; border-radius: 50px;
+      font-size: .72rem; font-weight: 600;
+    }
+    .badge-teal   { background: rgba(26,156,138,.2); color: var(--teal2); }
+    .badge-gold   { background: rgba(224,160,64,.2); color: var(--gold2); }
+    .badge-red    { background: rgba(224,80,80,.2);  color: var(--red2);  }
+    .badge-green  { background: rgba(61,186,122,.2); color: var(--green); }
+
+    .action-btns { display: flex; gap: 8px; }
+    .act-btn {
+      padding: 6px 12px; border-radius: 6px; border: none;
+      font-size: .78rem; font-weight: 600; cursor: pointer;
+      font-family: 'Outfit', sans-serif; transition: opacity .2s;
+    }
+    .act-btn:hover { opacity: .8; }
+    .act-edit   { background: rgba(26,156,138,.2); color: var(--teal2); }
+    .act-delete { background: rgba(224,80,80,.2);  color: var(--red2);  }
+    .act-view   { background: rgba(255,255,255,.08); color: var(--text); }
+
+    .place-name-cell { font-weight: 600; color: var(--white); }
+    .place-icon-cell { font-size: 1.4rem; }
+
+    /* Modal */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,.7); backdrop-filter: blur(4px);
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 16px; width: 560px; max-width: 95vw;
+      max-height: 90vh; overflow-y: auto;
+      padding: 32px; animation: popIn .3s ease both;
+    }
+    .modal-title { font-family: 'Syne', sans-serif; font-size: 1.2rem; font-weight: 800; color: var(--white); margin-bottom: 24px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group.full { grid-column: 1 / -1; }
+    .form-label { font-size: .78rem; font-weight: 600; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; display: block; margin-bottom: 6px; }
+    .form-input, .form-select, .form-textarea {
+      width: 100%; padding: 11px 14px;
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--white); font-size: .9rem;
+      font-family: 'Outfit', sans-serif; transition: border-color .2s;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--teal); }
+    .form-textarea { resize: vertical; min-height: 100px; }
+    .form-select option { background: var(--bg2); }
+    .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
+    .modal-save {
+      flex: 1; padding: 12px; background: var(--teal); color: var(--white);
+      border: none; border-radius: 8px; font-size: .92rem; font-weight: 600;
+      font-family: 'Outfit', sans-serif; cursor: pointer; transition: background .2s;
+    }
+    .modal-save:hover { background: var(--teal2); }
+    .modal-cancel {
+      padding: 12px 20px; background: var(--bg3); color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px; font-size: .92rem;
+      font-family: 'Outfit', sans-serif; cursor: pointer;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 300;
+      padding: 14px 20px; border-radius: 10px;
+      font-size: .88rem; font-weight: 600;
+      display: none; align-items: center; gap: 8px;
+      animation: slideIn .3s ease both;
+      box-shadow: 0 8px 32px rgba(0,0,0,.4);
+    }
+    .toast.show { display: flex; }
+    .toast.success { background: var(--green); color: var(--white); }
+    .toast.error   { background: var(--red);   color: var(--white); }
+    @keyframes slideIn { from { transform: translateX(60px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    /* Confirm dialog */
+    .confirm-overlay {
+      display: none; position: fixed; inset: 0; z-index: 300;
+      background: rgba(0,0,0,.75); align-items: center; justify-content: center;
+    }
+    .confirm-overlay.open { display: flex; }
+    .confirm-box {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 16px; padding: 32px; max-width: 380px; text-align: center;
+      animation: popIn .3s ease both;
+    }
+    .confirm-icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .confirm-title { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 800; color: var(--white); margin-bottom: 8px; }
+    .confirm-msg { font-size: .88rem; color: var(--muted); margin-bottom: 24px; }
+    .confirm-btns { display: flex; gap: 12px; justify-content: center; }
+    .confirm-yes { padding: 10px 24px; background: var(--red); color: var(--white); border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-family: 'Outfit', sans-serif; }
+    .confirm-no  { padding: 10px 24px; background: var(--bg3); color: var(--text); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-family: 'Outfit', sans-serif; }
+
+    /* Empty state */
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .empty-state span { font-size: 3rem; display: block; margin-bottom: 12px; }
+
+    /* Plans table */
+    .plan-places { display: flex; flex-wrap: wrap; gap: 6px; }
+    .plan-chip { background: rgba(26,156,138,.15); color: var(--teal2); font-size: .72rem; padding: 2px 8px; border-radius: 50px; }
+
+    @media(max-width: 900px) {
+      .sidebar { width: 60px; }
+      .side-logo, .side-item span, .logout-btn span { display: none; }
+      .main { margin-left: 60px; padding: 20px; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── LOGIN ── -->
+<div id="loginWrap" class="login-wrap">
+  <div class="login-box">
+    <div class="login-logo">🌴 Madampe Explorer</div>
+    <div class="login-sub">Admin Panel · Restricted Access</div>
+    <label class="login-label">Username</label>
+    <input class="login-input" id="loginUser" type="text" placeholder="admin" autocomplete="username"/>
+    <label class="login-label">Password</label>
+    <input class="login-input" id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password"
+           onkeydown="if(event.key==='Enter') doLogin()"/>
+    <button class="login-btn" onclick="doLogin()">Sign In →</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- ── DASHBOARD ── -->
+<div id="dashboard">
+  <div class="layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="side-logo">
+        🌴 <span>Admin Panel</span>
+      </div>
+      <nav class="side-nav">
+        <button class="side-item active" onclick="showSection('places')" id="nav-places">
+          <span class="icon">🏖️</span><span>Places</span>
+        </button>
+        <button class="side-item" onclick="showSection('categories')" id="nav-categories">
+          <span class="icon">🏷️</span><span>Categories</span>
+        </button>
+        <button class="side-item" onclick="showSection('plans')" id="nav-plans">
+          <span class="icon">📅</span><span>Trip Plans</span>
+        </button>
+        <button class="side-item" onclick="showSection('messages')" id="nav-messages">
+          <span class="icon">✉️</span><span>Messages</span>
+        </button>
+      </nav>
+      <div class="side-bottom">
+        <button class="logout-btn" onclick="doLogout()">
+          <span class="icon">🚪</span><span>Logout</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+
+      <!-- Stats -->
+      <div class="topbar">
+        <div>
+          <div class="page-title" id="pageTitle">Places</div>
+          <div class="page-sub" id="pageSub">Manage tourist attractions in the Madampe area</div>
+        </div>
+        <a href="index.html" target="_blank" style="color:var(--teal2);font-size:.85rem;text-decoration:none;">↗ View Site</a>
+      </div>
+
+      <div class="stats-row" id="statsRow">
+        <div class="stat-card"><div class="stat-icon">🏖️</div><div class="stat-val" id="s-places">–</div><div class="stat-lbl">Total Places</div></div>
+        <div class="stat-card"><div class="stat-icon">🏷️</div><div class="stat-val" id="s-cats">–</div><div class="stat-lbl">Categories</div></div>
+        <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-val" id="s-plans">–</div><div class="stat-lbl">Trip Plans Saved</div></div>
+        <div class="stat-card"><div class="stat-icon">✉️</div><div class="stat-val" id="s-msgs">–</div><div class="stat-lbl">Messages</div></div>
+      </div>
+
+      <!-- PLACES SECTION -->
+      <div class="section active" id="section-places">
+        <div class="table-card">
+          <div class="table-header">
+            <div class="table-title">All Places</div>
+            <button class="add-btn" onclick="openPlaceModal()">+ Add New Place</button>
+          </div>
+          <div class="search-bar">
+            <input class="search-input" id="placeSearch" placeholder="🔍  Search places…" oninput="filterPlaces()"/>
+            <select class="filter-select" id="catFilter" onchange="filterPlaces()">
+              <option value="">All Categories</option>
+            </select>
+          </div>
+          <div id="placesTableWrap">
+            <div class="empty-state"><span>⏳</span>Loading…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CATEGORIES SECTION -->
+      <div class="section" id="section-categories">
+        <div class="table-card">
+          <div class="table-header">
+            <div class="table-title">Categories</div>
+            <button class="add-btn" onclick="openCatModal()">+ Add Category</button>
+          </div>
+          <div id="catsTableWrap">
+            <div class="empty-state"><span>⏳</span>Loading…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PLANS SECTION -->
+      <div class="section" id="section-plans">
+        <div class="table-card">
+          <div class="table-header">
+            <div class="table-title">Saved Trip Plans</div>
+          </div>
+          <div id="plansTableWrap">
+            <div class="empty-state"><span>⏳</span>Loading…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MESSAGES SECTION -->
+      <div class="section" id="section-messages">
+        <div class="table-card">
+          <div class="table-header">
+            <div class="table-title">Contact Messages</div>
+          </div>
+          <div id="msgsTableWrap">
+            <div class="empty-state"><span>⏳</span>Loading…</div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- PLACE MODAL -->
+<div class="modal-overlay" id="placeModal">
+  <div class="modal">
+    <div class="modal-title" id="placeModalTitle">Add New Place</div>
+    <div class="form-row">
+      <div class="form-group full">
+        <label class="form-label">Place Name *</label>
+        <input class="form-input" id="f-name" placeholder="e.g. Marawila Beach"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category *</label>
+        <select class="form-select" id="f-category"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Distance from Madampe (km) *</label>
+        <input class="form-input" id="f-distance" type="number" step="0.1" min="0" placeholder="e.g. 8"/>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Description *</label>
+        <textarea class="form-textarea" id="f-desc" placeholder="Describe this place…"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Latitude</label>
+        <input class="form-input" id="f-lat" type="number" step="0.0000001" placeholder="e.g. 7.5100"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Longitude</label>
+        <input class="form-input" id="f-lng" type="number" step="0.0000001" placeholder="e.g. 79.8800"/>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Image URL (optional)</label>
+        <input class="form-input" id="f-image" placeholder="https://…"/>
+      </div>
+    </div>
+    <input type="hidden" id="f-id"/>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal('placeModal')">Cancel</button>
+      <button class="modal-save" onclick="savePlace()">💾 Save Place</button>
+    </div>
+  </div>
+</div>
+
+<!-- CATEGORY MODAL -->
+<div class="modal-overlay" id="catModal">
+  <div class="modal" style="width:380px">
+    <div class="modal-title">Add Category</div>
+    <div class="form-group">
+      <label class="form-label">Category Name *</label>
+      <input class="form-input" id="fc-name" placeholder="e.g. Adventure"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Icon (emoji)</label>
+      <input class="form-input" id="fc-icon" placeholder="e.g. 🏄"/>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal('catModal')">Cancel</button>
+      <button class="modal-save" onclick="saveCat()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-icon">⚠️</div>
+    <div class="confirm-title">Are you sure?</div>
+    <div class="confirm-msg" id="confirmMsg">This action cannot be undone.</div>
+    <div class="confirm-btns">
+      <button class="confirm-no"  onclick="closeConfirm()">Cancel</button>
+      <button class="confirm-yes" id="confirmYes">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+const API = './api';
+// ── Simple admin credentials (change these!) ──────────────
+const ADMIN_USER = 'admin';
+const ADMIN_PASS = 'madampe2024';
+
+let allPlaces = [], allCats = [], allPlans = [], allMsgs = [];
+let editingId = null;
+
+// ── LOGIN ─────────────────────────────────────────────────
+function doLogin() {
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value;
+  if (u === ADMIN_USER && p === ADMIN_PASS) {
+    sessionStorage.setItem('admin_auth', '1');
+    document.getElementById('loginWrap').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    loadAll();
+  } else {
+    document.getElementById('loginErr').textContent = '❌ Invalid username or password.';
+  }
+}
+function doLogout() {
+  sessionStorage.removeItem('admin_auth');
+  location.reload();
+}
+// Auto-login if session exists
+if (sessionStorage.getItem('admin_auth') === '1') {
+  document.getElementById('loginWrap').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  loadAll();
+}
+
+// ── LOAD ALL DATA ─────────────────────────────────────────
+async function loadAll() {
+  await Promise.all([loadPlaces(), loadCats(), loadPlans(), loadMsgs()]);
+  updateStats();
+}
+
+async function loadPlaces() {
+  try {
+    const r = await fetch(`${API}/places.php`);
+    const d = await r.json();
+    allPlaces = d.success ? d.data : [];
+  } catch { allPlaces = []; }
+  renderPlacesTable();
+  populateCatFilter();
+}
+
+async function loadCats() {
+  try {
+    const r = await fetch(`${API}/categories.php`);
+    const d = await r.json();
+    allCats = d.success ? d.data : [];
+  } catch { allCats = []; }
+  renderCatsTable();
+  populateCatSelects();
+}
+
+async function loadPlans() {
+  try {
+    // We'll list plans from trip_plans via a custom approach
+    // Since we only have GET by ID, we'll show a message
+    allPlans = [];
+  } catch { allPlans = []; }
+  renderPlansTable();
+}
+
+async function loadMsgs() {
+  try {
+    const r = await fetch(`${API}/contact.php`);
+    const d = await r.json();
+    allMsgs = d.success ? d.data : [];
+  } catch { allMsgs = []; }
+  renderMsgsTable();
+}
+
+function updateStats() {
+  document.getElementById('s-places').textContent = allPlaces.length;
+  document.getElementById('s-cats').textContent   = allCats.length;
+  document.getElementById('s-plans').textContent  = '–';
+  document.getElementById('s-msgs').textContent   = allMsgs.length;
+}
+
+// ── NAVIGATION ────────────────────────────────────────────
+const sectionMeta = {
+  places:     { title: 'Places',      sub: 'Manage tourist attractions in the Madampe area' },
+  categories: { title: 'Categories',  sub: 'Manage place categories' },
+  plans:      { title: 'Trip Plans',  sub: 'View saved visitor trip plans' },
+  messages:   { title: 'Messages',    sub: 'Contact messages from visitors' },
+};
+
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.side-item').forEach(s => s.classList.remove('active'));
+  document.getElementById(`section-${name}`).classList.add('active');
+  document.getElementById(`nav-${name}`).classList.add('active');
+  document.getElementById('pageTitle').textContent = sectionMeta[name].title;
+  document.getElementById('pageSub').textContent   = sectionMeta[name].sub;
+}
+
+// ── PLACES TABLE ──────────────────────────────────────────
+function renderPlacesTable(list) {
+  const data = list || allPlaces;
+  const wrap = document.getElementById('placesTableWrap');
+  if (!data.length) {
+    wrap.innerHTML = `<div class="empty-state"><span>🏖️</span>No places found.</div>`; return;
+  }
+  wrap.innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Icon</th><th>Name</th><th>Category</th><th>Distance</th><th>Status</th><th>Actions</th>
+      </tr></thead>
+      <tbody>
+        ${data.map(p => `
+          <tr>
+            <td class="place-icon-cell">${p.category_icon||'📍'}</td>
+            <td class="place-name-cell">${p.name}</td>
+            <td><span class="badge badge-teal">${p.category_name}</span></td>
+            <td>${p.distance_km} km</td>
+            <td><span class="badge ${p.is_active==1?'badge-green':'badge-red'}">${p.is_active==1?'Active':'Hidden'}</span></td>
+            <td>
+              <div class="action-btns">
+                <button class="act-btn act-view"   onclick="window.open('place.html?id=${p.id}','_blank')">View</button>
+                <button class="act-btn act-edit"   onclick="openPlaceModal(${p.id})">Edit</button>
+                <button class="act-btn act-delete" onclick="confirmDelete('place',${p.id},'${p.name.replace(/'/g,"\\'")}')">Delete</button>
+              </div>
+            </td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+function filterPlaces() {
+  const q   = document.getElementById('placeSearch').value.toLowerCase();
+  const cat = document.getElementById('catFilter').value;
+  const filtered = allPlaces.filter(p =>
+    (p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q)) &&
+    (!cat || p.category_name === cat)
+  );
+  renderPlacesTable(filtered);
+}
+
+function populateCatFilter() {
+  const sel = document.getElementById('catFilter');
+  const cats = [...new Set(allPlaces.map(p => p.category_name))];
+  sel.innerHTML = `<option value="">All Categories</option>` +
+    cats.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+// ── PLACE MODAL ───────────────────────────────────────────
+function populateCatSelects() {
+  const sel = document.getElementById('f-category');
+  sel.innerHTML = allCats.map(c => `<option value="${c.id}">${c.icon||''} ${c.name}</option>`).join('');
+}
+
+function openPlaceModal(id) {
+  editingId = id || null;
+  document.getElementById('placeModalTitle').textContent = id ? 'Edit Place' : 'Add New Place';
+  const fields = ['f-name','f-distance','f-desc','f-lat','f-lng','f-image','f-id'];
+  fields.forEach(f => { const el = document.getElementById(f); if(el) el.value = ''; });
+
+  if (id) {
+    const p = allPlaces.find(x => x.id === id);
+    if (p) {
+      document.getElementById('f-id').value       = p.id;
+      document.getElementById('f-name').value     = p.name;
+      document.getElementById('f-distance').value = p.distance_km;
+      document.getElementById('f-desc').value     = p.description;
+      document.getElementById('f-lat').value      = p.latitude || '';
+      document.getElementById('f-lng').value      = p.longitude || '';
+      document.getElementById('f-image').value    = p.image_url || '';
+      document.getElementById('f-category').value = p.category_id;
+    }
+  }
+  document.getElementById('placeModal').classList.add('open');
+}
+
+async function savePlace() {
+  const name     = document.getElementById('f-name').value.trim();
+  const cat      = document.getElementById('f-category').value;
+  const distance = document.getElementById('f-distance').value;
+  const desc     = document.getElementById('f-desc').value.trim();
+
+  if (!name || !cat || !distance || !desc) { showToast('Please fill in all required fields.','error'); return; }
+
+  const body = {
+    name, category_id: parseInt(cat),
+    distance_km: parseFloat(distance), description: desc,
+    latitude:  document.getElementById('f-lat').value   || null,
+    longitude: document.getElementById('f-lng').value   || null,
+    image_url: document.getElementById('f-image').value || null,
+  };
+
+  const id     = document.getElementById('f-id').value;
+  const method = id ? 'PUT' : 'POST';
+  const url    = id ? `${API}/places.php?id=${id}` : `${API}/places.php`;
+
+  try {
+    const r = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (d.success) {
+      showToast(id ? '✅ Place updated!' : '✅ Place added!', 'success');
+      closeModal('placeModal');
+      await loadPlaces();
+      updateStats();
+    } else { showToast('❌ ' + d.error, 'error'); }
+  } catch { showToast('❌ Server error.', 'error'); }
+}
+
+// ── CATEGORIES TABLE ──────────────────────────────────────
+function renderCatsTable() {
+  const wrap = document.getElementById('catsTableWrap');
+  if (!allCats.length) { wrap.innerHTML = `<div class="empty-state"><span>🏷️</span>No categories yet.</div>`; return; }
+  wrap.innerHTML = `
+    <table>
+      <thead><tr><th>Icon</th><th>Name</th><th>Places</th><th>Actions</th></tr></thead>
+      <tbody>
+        ${allCats.map(c => `
+          <tr>
+            <td style="font-size:1.4rem">${c.icon||'📍'}</td>
+            <td class="place-name-cell">${c.name}</td>
+            <td><span class="badge badge-teal">${c.place_count} places</span></td>
+            <td><div class="action-btns">
+              <button class="act-btn act-delete" onclick="confirmDelete('category',${c.id},'${c.name}')">Delete</button>
+            </div></td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+function openCatModal() { document.getElementById('catModal').classList.add('open'); }
+
+async function saveCat() {
+  const name = document.getElementById('fc-name').value.trim();
+  const icon = document.getElementById('fc-icon').value.trim();
+  if (!name) { showToast('Category name is required.','error'); return; }
+  try {
+    const r = await fetch(`${API}/categories.php`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({name, icon: icon || '📍'})
+    });
+    const d = await r.json();
+    if (d.success) {
+      showToast('✅ Category added!','success');
+      closeModal('catModal');
+      document.getElementById('fc-name').value = '';
+      document.getElementById('fc-icon').value = '';
+      await loadCats(); updateStats();
+    } else { showToast('❌ ' + d.error,'error'); }
+  } catch { showToast('❌ Server error.','error'); }
+}
+
+// ── PLANS TABLE ───────────────────────────────────────────
+function renderPlansTable() {
+  document.getElementById('plansTableWrap').innerHTML =
+    `<div class="empty-state"><span>📅</span>
+     <p style="margin-top:8px">Trip plans are saved by visitors when they use the Trip Planner on the homepage.</p>
+     <p style="margin-top:4px;font-size:.82rem">Add a <code style="background:var(--bg3);padding:2px 6px;border-radius:4px">GET /api/trip_plans.php</code> list endpoint to display them here.</p>
+    </div>`;
+}
+
+// ── MESSAGES TABLE ────────────────────────────────────────
+function renderMsgsTable() {
+  const wrap = document.getElementById('msgsTableWrap');
+  if (!allMsgs.length) { wrap.innerHTML = `<div class="empty-state"><span>✉️</span>No messages yet.</div>`; return; }
+  wrap.innerHTML = `
+    <table>
+      <thead><tr><th>Name</th><th>Email</th><th>Message</th><th>Date</th></tr></thead>
+      <tbody>
+        ${allMsgs.map(m => `
+          <tr>
+            <td class="place-name-cell">${m.name}</td>
+            <td><a href="mailto:${m.email}" style="color:var(--teal2)">${m.email}</a></td>
+            <td style="max-width:300px;color:var(--muted)">${m.message.slice(0,80)}${m.message.length>80?'…':''}</td>
+            <td style="white-space:nowrap;color:var(--muted);font-size:.8rem">${new Date(m.created_at).toLocaleDateString()}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+// ── DELETE ────────────────────────────────────────────────
+let pendingDelete = null;
+
+function confirmDelete(type, id, name) {
+  pendingDelete = {type, id};
+  document.getElementById('confirmMsg').textContent = `Delete "${name}"? This cannot be undone.`;
+  document.getElementById('confirmOverlay').classList.add('open');
+  document.getElementById('confirmYes').onclick = executeDelete;
+}
+
+async function executeDelete() {
+  if (!pendingDelete) return;
+  const {type, id} = pendingDelete;
+  closeConfirm();
+  const url = type === 'place' ? `${API}/places.php?id=${id}` : `${API}/categories.php?id=${id}`;
+  try {
+    const r = await fetch(url, {method:'DELETE'});
+    const d = await r.json();
+    if (d.success) {
+      showToast(`✅ ${type === 'place' ? 'Place' : 'Category'} deleted.`,'success');
+      type === 'place' ? await loadPlaces() : await loadCats();
+      updateStats();
+    } else { showToast('❌ ' + d.error,'error'); }
+  } catch { showToast('❌ Server error.','error'); }
+}
+
+function closeConfirm() {
+  pendingDelete = null;
+  document.getElementById('confirmOverlay').classList.remove('open');
+}
+
+// ── UTILS ─────────────────────────────────────────────────
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+let toastTimer;
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.classList.remove('show'); }, 3500);
+}
+</script>
+</body>
+</html>
